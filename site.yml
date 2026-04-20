@@ -1,0 +1,48 @@
+---
+- name: Deploy Lab 4 Service
+  hosts: lab4
+  become: yes
+  tasks:
+    - name: Ensure directory exists
+      file:
+        path: /opt/lab4-service/html
+        state: directory
+        owner: www-data
+        group: www-data
+
+    - name: Deploy index.html
+      copy:
+        dest: /opt/lab4-service/html/index.html
+        content: "<html><body><h1>Студент: Цуненко</h1></body></html>"
+        owner: www-data
+        group: www-data
+
+    - name: Copy service script
+      copy:
+        src: ./service.sh
+        dest: /opt/lab4-service/service.sh
+        mode: '0755'
+        owner: www-data
+
+    - name: Setup systemd unit
+      copy:
+        src: ./lab4-service.service
+        dest: /etc/systemd/system/lab4-service.service
+
+    - name: Run service
+      systemd:
+        name: lab4-service
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Healthcheck
+      uri:
+        url: "http://127.0.0.1:8000/"
+        status_code: 200
+      register: result
+
+    - name: Show Healthcheck result
+      debug:
+        msg: "Service is UP and returning 200"
+      when: result.status == 200
